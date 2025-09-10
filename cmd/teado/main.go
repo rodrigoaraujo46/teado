@@ -3,8 +3,9 @@ package main
 import (
 	"os"
 	"teado/internal/app"
+	"teado/internal/form"
+	"teado/internal/lists"
 	"teado/internal/store"
-	"teado/internal/tasks"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -22,9 +23,11 @@ func main() {
 	taskStore, err := store.NewTaskStore("./DB", time.Second)
 	assert.NoError(err, "Error creating taskStore.")
 
-	taskHandler, err := tasks.New(taskStore)
-	assert.NoError(err, "Error creating taskHandler with provided store.")
+	lists := lists.New()
+	assert.NoError(err, "Error creating taskList with provided store.")
 
-	_, err = tea.NewProgram(app.New(taskHandler), tea.WithAltScreen()).Run()
+	taskForm := taskform.New()
+
+	_, err = tea.NewProgram(app.New(lists, taskForm, taskStore), tea.WithAltScreen()).Run()
 	assert.NoError(err, "Error running program")
 }

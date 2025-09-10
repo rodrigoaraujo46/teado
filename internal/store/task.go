@@ -25,7 +25,7 @@ func NewTaskStore(path string, timeout time.Duration) (*taskStore, error) {
 		CREATE TABLE IF NOT EXISTS tasks (
         	id INTEGER PRIMARY KEY AUTOINCREMENT,
         	name TEXT,
-        	info TEXT,
+        	description TEXT,
         	is_done BOOLEAN
     	);`
 
@@ -44,9 +44,9 @@ func (ts taskStore) Create(task *models.Task) error {
 	ctx, cancel := context.WithTimeout(context.Background(), ts.timeout)
 	defer cancel()
 
-	const query = "INSERT INTO tasks (name, info, is_done) VALUES(?, ?, ?)"
+	const query = "INSERT INTO tasks (name, description, is_done) VALUES(?, ?, ?)"
 
-	res, err := ts.db.ExecContext(ctx, query, task.Name, task.Info, task.IsDone)
+	res, err := ts.db.ExecContext(ctx, query, task.Title, task.Description, task.IsDone)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (ts taskStore) Create(task *models.Task) error {
 	return nil
 }
 
-func (ts taskStore) Read() ([]models.Task, error) {
+func (ts taskStore) Read() (models.Tasks, error) {
 	const query = "SELECT * FROM tasks"
 
 	ctx, cancel := context.WithTimeout(context.Background(), ts.timeout)
@@ -72,10 +72,10 @@ func (ts taskStore) Read() ([]models.Task, error) {
 	}
 	defer rows.Close()
 
-	var tasks []models.Task
+	var tasks models.Tasks
 	for rows.Next() {
 		var t models.Task
-		if err := rows.Scan(&t.Id, &t.Name, &t.Info, &t.IsDone); err != nil {
+		if err := rows.Scan(&t.Id, &t.Title, &t.Description, &t.IsDone); err != nil {
 			return nil, err
 		}
 		tasks = append(tasks, t)
