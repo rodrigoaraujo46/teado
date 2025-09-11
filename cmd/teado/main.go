@@ -28,6 +28,6 @@ func main() {
 
 	taskForm := taskform.New()
 
-	_, err = tea.NewProgram(app.New(lists, taskForm, taskStore), tea.WithAltScreen()).Run()
+	_, err = tea.NewProgram(app.New(*lists, *taskForm, taskStore), tea.WithAltScreen()).Run()
 	assert.NoError(err, "Error running program")
 }

@@ -36,42 +36,49 @@ const (
 
 type model struct {
 	current   view
-	views     map[view]tea.Model
+	tasks     lists.Model
+	form      taskform.Model
 	taskStore TaskStore
 }
 
-func New(tasklist tea.Model, taskform tea.Model, taskstore TaskStore) *model {
-	views := make(map[view]tea.Model)
-	views[tasks] = tasklist
-	views[form] = taskform
-
+func New(lists lists.Model, form taskform.Model, store TaskStore) *model {
 	return &model{
 		current:   tasks,
-		views:     views,
-		taskStore: taskstore,
+		tasks:     lists,
+		form:      form,
+		taskStore: store,
 	}
 }
 
-func (m model) Init() tea.Cmd { return m.tasksLoadedCmd }
+func (m model) Init() tea.Cmd {
+	return m.tasksLoadedCmd
+}
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		_, cmd1 := m.tasks.Update(msg)
+		_, cmd2 := m.form.Update(msg)
+
+		return m, tea.Batch(cmd1, cmd2)
+
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC:
 			return m, tea.Quit
 		}
 
+	case taskform.GoBackMsg:
+		m.current = tasks
+		return m, nil
+
 	case tasksLoadedMsg:
-		var cmd tea.Cmd
-		m.views[tasks], cmd = m.views[tasks].Update(lists.UpdateTasksMsg{Tasks: msg.tasks})
-		return m, cmd
+		m.tasks.UpdateTasks(msg.tasks)
+		return m, nil
 
 	case lists.AddTaskMsg:
 		m.current = form
-		m.views[form] = taskform.New()
-
-		m.views[form].Update(taskform.NewTaskFormMsg{Done: msg.Done})
+		m.form.Start(msg.Done)
 		return m, nil
 
 	case taskform.NewTaskMsg:
@@ -79,16 +86,26 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.current = tasks
-		m.views[tasks].Update(lists.NewTaskMsg{Task: msg.Task})
+		m.tasks.InsertTask(msg.Task)
 		return m, nil
 	}
 
 	var cmd tea.Cmd
-	m.views[m.current], cmd = m.views[m.current].Update(msg)
+	switch m.current {
+	case tasks:
+		_, cmd = m.tasks.Update(msg)
+	case form:
+		_, cmd = m.form.Update(msg)
+	}
 
 	return m, cmd
 }
 
 func (m model) View() string {
-	return m.views[m.current].View()
+	switch m.current {
+	case tasks:
+		return m.tasks.View()
+	default:
+		return m.form.View()
+	}
 }

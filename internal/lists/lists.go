@@ -17,7 +17,7 @@ const (
 	done
 )
 
-type model struct {
+type Model struct {
 	current  focus
 	lists    []list.Model
 	keys     keys
@@ -27,8 +27,8 @@ type model struct {
 	height   int
 }
 
-func New() *model {
-	return &model{
+func New() *Model {
+	return &Model{
 		current: toDo,
 		lists: []list.Model{
 			newList("TO DO"),
@@ -39,9 +39,9 @@ func New() *model {
 	}
 }
 
-func (m model) Init() tea.Cmd { return nil }
+func (m Model) Init() tea.Cmd { return nil }
 
-func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if m.lists[m.current].FilterState() == list.Filtering {
@@ -49,12 +49,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		switch {
 		case key.Matches(msg, m.keys.insertItem):
-			return m, addTaskCmd(m.current == done)
+			return *m, addTaskCmd(m.current == done)
 
 		case key.Matches(msg, m.keys.more):
 			m.fullHelp = !m.fullHelp
 			m.setSize(m.width, m.height)
-			return m, nil
+			return *m, nil
 
 		case key.Matches(msg, m.keys.toggle):
 			if m.current == done {
@@ -62,35 +62,22 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				m.current = done
 			}
-			return m, nil
+			return *m, nil
 		}
 
 	case tea.WindowSizeMsg:
 		m.setSize(msg.Width, msg.Height)
-		return m, nil
+		return *m, nil
 
-	case UpdateTasksMsg:
-		m.updateLists(msg.Tasks)
-		return m, nil
-
-	case NewTaskMsg:
-		task := msg.Task
-		if task.IsDone {
-			m.lists[done].InsertItem(0, task)
-		} else {
-			m.lists[toDo].InsertItem(0, task)
-		}
-
-		return m, nil
 	}
 
 	var cmd tea.Cmd
 	m.lists[m.current], cmd = m.lists[m.current].Update(msg)
 
-	return m, cmd
+	return *m, cmd
 }
 
-func (m model) View() string {
+func (m Model) View() string {
 	views := make([]string, len(m.lists))
 	for i, l := range m.lists {
 		view := l.View()
@@ -109,9 +96,17 @@ func (m model) View() string {
 	)
 }
 
-func (m *model) setSize(width, height int) {
+func (m *Model) InsertTask(task models.Task) {
+	if task.IsDone {
+		m.lists[done].InsertItem(0, task)
+	} else {
+		m.lists[toDo].InsertItem(0, task)
+	}
+}
+
+func (m *Model) setSize(width, height int) {
 	m.width, m.height = width, height
-	helpHeight := m.helpSize()
+	helpHeight := m.helpLines()
 
 	m.styles.focused = m.styles.focused.
 		Width(m.width/2 - 2).
@@ -121,23 +116,38 @@ func (m *model) setSize(width, height int) {
 		MaxHeight(m.height - helpHeight)
 
 	for i := range m.lists {
-		m.lists[i].SetSize(m.width, m.height-helpHeight-5)
+		m.lists[i].SetSize(m.width/2-2, m.height-helpHeight-5)
 	}
 }
 
-func (m *model) updateLists(tasks models.Tasks) {
+func (m *Model) UpdateTasks(tasks models.Tasks) {
 	m.lists[toDo].SetItems(tasksToItems(tasks.GetToDo()))
 	m.lists[done].SetItems(tasksToItems(tasks.GetDone()))
 }
 
-func (m model) helpView() string {
+func (m Model) helpView() string {
 	current := m.lists[m.current]
+
+	/*
+		I set width to full because we are rendering help outside the list,
+		afterwards we set the size back so we render items properly in delegate.
+
+		I should probably create my own help function instead of using list
+		FullHelp/ShortHelp so that I can render help without doing this.
+	*/
+
+	current.SetWidth(m.width - 2)
+	var view string
 	if m.fullHelp {
-		return current.Help.FullHelpView(current.FullHelp())
+		view = current.Help.FullHelpView(current.FullHelp())
+	} else {
+		view = current.Help.ShortHelpView(current.ShortHelp())
 	}
-	return current.Help.ShortHelpView(current.ShortHelp())
+	current.SetSize(m.width, m.height)
+
+	return view
 }
 
-func (m model) helpSize() int {
+func (m Model) helpLines() int {
 	return strings.Count(m.helpView(), "\n") + 1
 }

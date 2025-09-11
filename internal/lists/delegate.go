@@ -54,12 +54,10 @@ type delegate struct {
 }
 
 func newDelegate(keys delegateKeys) *delegate {
-	d := &delegate{
-		DefaultDelegate: list.NewDefaultDelegate(),
-		keys:            keys,
+	return &delegate{
+		list.NewDefaultDelegate(),
+		keys,
 	}
-
-	return d
 }
 
 func (d *delegate) Update(msg tea.Msg, m *list.Model) tea.Cmd {
@@ -102,7 +100,7 @@ func (d delegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 	}
 
 	task, ok := item.(models.Task)
-	assert.Assert(ok, "Item should be task for item delegate")
+	assert.Assert(ok, "Item should be task in item delegate")
 
 	var matchedRunes []int
 
@@ -110,7 +108,7 @@ func (d delegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 	desc := task.Description
 	s := &d.Styles
 
-	textwidth := m.Width() - s.NormalTitle.GetPaddingLeft() - s.NormalTitle.GetPaddingRight()
+	textwidth := m.Width() - s.NormalTitle.GetPaddingLeft() - s.NormalTitle.GetPaddingRight() - len(ellipsis) - 1
 	title = ansi.Truncate(title, textwidth, ellipsis)
 	if d.ShowDescription {
 		var lines []string
