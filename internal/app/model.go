@@ -67,16 +67,19 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.views[tasks], cmd = m.views[tasks].Update(lists.UpdateTasksMsg{Tasks: msg.tasks})
 		return m, cmd
 
-	case lists.NewTaskMsg:
+	case lists.AddTaskMsg:
 		m.current = form
 		m.views[form] = taskform.New()
-		return m, m.views[form].Init()
+
+		m.views[form].Update(taskform.NewTaskFormMsg{Done: msg.Done})
+		return m, nil
 
 	case taskform.NewTaskMsg:
 		if err := m.taskStore.Create(&msg.Task); err != nil {
 			return m, nil
 		}
 		m.current = tasks
+		m.views[tasks].Update(lists.NewTaskMsg{Task: msg.Task})
 		return m, nil
 	}
 

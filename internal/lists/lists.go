@@ -21,10 +21,10 @@ type model struct {
 	current  focus
 	lists    []list.Model
 	keys     keys
+	styles   styles
 	fullHelp bool
 	width    int
 	height   int
-	styles   styles
 }
 
 func New() *model {
@@ -42,24 +42,14 @@ func New() *model {
 func (m model) Init() tea.Cmd { return nil }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	current := m.lists[m.current]
-
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.setSize(msg.Width, msg.Height)
-		return m, nil
-
-	case UpdateTasksMsg:
-		m.updateLists(msg.Tasks)
-		return m, nil
-
 	case tea.KeyMsg:
-		if current.FilterState() == list.Filtering {
+		if m.lists[m.current].FilterState() == list.Filtering {
 			break
 		}
 		switch {
 		case key.Matches(msg, m.keys.insertItem):
-			return m, newTaskCmd
+			return m, addTaskCmd(m.current == done)
 
 		case key.Matches(msg, m.keys.more):
 			m.fullHelp = !m.fullHelp
@@ -74,10 +64,29 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
+
+	case tea.WindowSizeMsg:
+		m.setSize(msg.Width, msg.Height)
+		return m, nil
+
+	case UpdateTasksMsg:
+		m.updateLists(msg.Tasks)
+		return m, nil
+
+	case NewTaskMsg:
+		task := msg.Task
+		if task.IsDone {
+			m.lists[done].InsertItem(0, task)
+		} else {
+			m.lists[toDo].InsertItem(0, task)
+		}
+
+		return m, nil
 	}
 
 	var cmd tea.Cmd
 	m.lists[m.current], cmd = m.lists[m.current].Update(msg)
+
 	return m, cmd
 }
 

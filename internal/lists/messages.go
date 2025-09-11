@@ -6,10 +6,18 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type NewTaskMsg struct{}
+type AddTaskMsg struct {
+	Done bool
+}
 
-func newTaskCmd() tea.Msg {
-	return NewTaskMsg{}
+func addTaskCmd(done bool) tea.Cmd {
+	return func() tea.Msg {
+		return AddTaskMsg{done}
+	}
+}
+
+type NewTaskMsg struct {
+	Task models.Task
 }
 
 type UpdateTasksMsg struct {
