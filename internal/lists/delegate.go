@@ -106,6 +106,8 @@ func (d delegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 
 	title := task.Title
 	desc := task.Description
+	d.ShowDescription = len(desc) != 0
+
 	s := &d.Styles
 
 	textwidth := m.Width() - s.NormalTitle.GetPaddingLeft() - s.NormalTitle.GetPaddingRight() - len(ellipsis) - 1
@@ -132,10 +134,8 @@ func (d delegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 	}
 
 	if emptyFilter {
-		if !task.IsDone {
-			title = s.DimmedTitle.Render(title)
-			desc = s.DimmedDesc.Render(desc)
-		}
+		title = s.DimmedTitle.Render(title)
+		desc = s.DimmedDesc.Render(desc)
 	} else if isSelected && m.FilterState() != list.Filtering {
 		if isFiltered {
 			unmatched := s.SelectedTitle.Inline(true)
