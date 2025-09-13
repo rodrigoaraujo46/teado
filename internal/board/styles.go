@@ -1,4 +1,4 @@
-package lists
+package board
 
 import "github.com/charmbracelet/lipgloss"
 

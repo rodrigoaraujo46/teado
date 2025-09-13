@@ -1,38 +1,31 @@
 package models
 
+import "time"
+
 type Tasks []Task
 
 type Task struct {
-	Id          uint64
+	Id          int64
 	Title       string
 	Description string
 	IsDone      bool
+	UpdatedAt   time.Time
 }
 
-func NewTask(id uint64, name, description string, isDone bool) *Task {
-	return &Task{id, name, description, isDone}
+func NewTask(title, description string, isDone bool) *Task {
+	return &Task{Title: title, Description: description, IsDone: isDone}
 }
 
 func (t Task) FilterValue() string { return t.Title }
 
-func (tasks Tasks) GetToDo() Tasks {
-	notDone := make(Tasks, 0)
-	for _, task := range tasks {
-		if !task.IsDone {
-			notDone = append(notDone, task)
-		}
-	}
-
-	return notDone
-}
-
-func (tasks Tasks) GetDone() Tasks {
-	done := make(Tasks, 0)
+func (tasks Tasks) SplitByIsDone() (todo Tasks, done Tasks) {
 	for _, task := range tasks {
 		if task.IsDone {
 			done = append(done, task)
+		} else {
+			todo = append(todo, task)
 		}
 	}
 
-	return done
+	return todo, done
 }

@@ -2,10 +2,10 @@ package main
 
 import (
 	"os"
-	"teado/internal/app"
+	"teado/internal/board"
 	"teado/internal/form"
-	"teado/internal/lists"
 	"teado/internal/store"
+	"teado/internal/teado"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -20,14 +20,14 @@ func main() {
 		assert.NoError(f.Close(), "File has already been closed")
 	}(f)
 
-	taskStore, err := store.NewTaskStore("./DB", time.Second)
+	store, err := store.NewStore("./DB", time.Second)
 	assert.NoError(err, "Error creating taskStore.")
 
-	lists := lists.New()
+	board := board.New(store)
 	assert.NoError(err, "Error creating taskList with provided store.")
 
-	taskForm := taskform.New()
+	form := form.New(store)
 
-	_, err = tea.NewProgram(app.New(*lists, *taskForm, taskStore), tea.WithAltScreen()).Run()
+	_, err = tea.NewProgram(teado.New(*board, *form), tea.WithAltScreen()).Run()
 	assert.NoError(err, "Error running program")
 }

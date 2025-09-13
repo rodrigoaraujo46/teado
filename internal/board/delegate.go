@@ -1,9 +1,10 @@
-package lists
+package board
 
 import (
 	"fmt"
 	"io"
 	"strings"
+	"teado/internal/messages"
 	"teado/internal/models"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -16,6 +17,7 @@ import (
 
 type delegateKeys struct {
 	choose key.Binding
+	toggle key.Binding
 	remove key.Binding
 }
 
@@ -24,6 +26,10 @@ func newDelegateKeys() *delegateKeys {
 		choose: key.NewBinding(
 			key.WithKeys("enter"),
 			key.WithHelp("enter", "choose"),
+		),
+		toggle: key.NewBinding(
+			key.WithKeys("t"),
+			key.WithHelp("t", "toggle completion"),
 		),
 		remove: key.NewBinding(
 			key.WithKeys("x", "backspace"),
@@ -35,6 +41,7 @@ func newDelegateKeys() *delegateKeys {
 func (d delegateKeys) ShortHelp() []key.Binding {
 	return []key.Binding{
 		d.choose,
+		d.toggle,
 		d.remove,
 	}
 }
@@ -43,6 +50,7 @@ func (d delegateKeys) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{
 			d.choose,
+			d.toggle,
 			d.remove,
 		},
 	}
@@ -50,40 +58,35 @@ func (d delegateKeys) FullHelp() [][]key.Binding {
 
 type delegate struct {
 	list.DefaultDelegate
-	keys delegateKeys
+	keys  delegateKeys
+	store Store
 }
 
-func newDelegate(keys delegateKeys) *delegate {
+func newDelegate(keys delegateKeys, store Store) *delegate {
 	return &delegate{
 		list.NewDefaultDelegate(),
 		keys,
+		store,
 	}
 }
 
-func (d *delegate) Update(msg tea.Msg, m *list.Model) tea.Cmd {
-	var title string
-	if i, ok := m.SelectedItem().(models.Task); ok {
-		title = i.Title
-	} else {
-		return nil
-	}
-
+func (d delegate) Update(msg tea.Msg, m *list.Model) tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		task, ok := m.SelectedItem().(models.Task)
+		if !ok {
+			return nil
+		}
 		switch {
 		case key.Matches(msg, d.keys.choose):
-			return m.NewStatusMessage("You chose " + title)
+			return updateTask(task)
+
+		case key.Matches(msg, d.keys.toggle):
+			task.IsDone = !task.IsDone
+			return d.updateTask(task)
 
 		case key.Matches(msg, d.keys.remove):
-			//task, ok := m.SelectedItem().(models.Task)
-			//assert.Assert(ok, "Item needs to be a models.Task")
-
-			//Delete from store, pass in task
-
-			index := m.Index()
-			m.RemoveItem(index)
-
-			return m.NewStatusMessage("Deleted " + title)
+			return d.deleteTask(task)
 		}
 	}
 
@@ -162,9 +165,23 @@ func (d delegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 }
 
 func (d delegate) ShortHelp() []key.Binding {
-	return []key.Binding{d.keys.choose, d.keys.remove}
+	return []key.Binding{d.keys.choose, d.keys.toggle, d.keys.remove}
 }
 
 func (d delegate) FullHelp() [][]key.Binding {
-	return [][]key.Binding{{d.keys.choose, d.keys.remove}}
+	return [][]key.Binding{{d.keys.choose,d.keys.toggle, d.keys.remove}}
+}
+
+func (d delegate) updateTask(task models.Task) tea.Cmd {
+	return func() tea.Msg {
+		d.store.Update(&task)
+		return messages.TaskUpdated{Task: task}
+	}
+}
+
+func (d delegate) deleteTask(task models.Task) tea.Cmd {
+	return func() tea.Msg {
+		d.store.Delete(task.Id)
+		return messages.TaskDeleted{Task: task}
+	}
 }
