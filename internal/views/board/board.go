@@ -89,7 +89,8 @@ func (b board) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		b.lists[focus].InsertItem(0, msg.Task)
-		b.lists[focus].Select(0)
+		b.lists[focus].ResetFilter()
+		b.lists[focus].ResetSelected()
 		return b, nil
 
 	case messages.TasksRead:
@@ -97,41 +98,32 @@ func (b board) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return b, nil
 
 	case messages.TaskUpdated:
+		var cmd tea.Cmd
+		if index := getTaskIndex(b.lists[toDo].Items(), msg.Task.Id); index != -1 {
+			cmd = deleteSelectedItem(&b.lists[toDo])
+		} else if index := getTaskIndex(b.lists[done].Items(), msg.Task.Id); index != -1 {
+			cmd = deleteSelectedItem(&b.lists[done])
+		} else {
+			return b, nil
+		}
+
 		focus := toDo
 		if msg.Task.IsDone {
 			focus = done
-		}
-
-		var cmd tea.Cmd
-		if index := getTaskIndex(b.lists[toDo].Items(), msg.Task.Id); index != -1 {
-			//I HAVE TO DO THIS BULLSHIT BCS CHARM IS TAKING OVER A YEAR TO MERGE
-			//A PR THAT CHANGES 3 LINES FOR REMOVEITEM
-			cmd = b.lists[toDo].SetItems(slices.Delete(b.lists[toDo].Items(), index, index+1))
-		} else if index := getTaskIndex(b.lists[done].Items(), msg.Task.Id); index != -1 {
-			//I HAVE TO DO THIS BULLSHIT BCS CHARM IS TAKING OVER A YEAR TO MERGE
-			//A PR THAT CHANGES 3 LINES FOR REMOVEITEM
-			cmd = b.lists[done].SetItems(slices.Delete(b.lists[done].Items(), index, index+1))
-		} else {
-			return b, nil
 		}
 
 		b.lists[focus].InsertItem(0, msg.Task)
 		return b, cmd
 
 	case messages.TaskDeleted:
-		focus := toDo
+		var l *list.Model
 		if msg.Task.IsDone {
-			focus = done
+			l = &b.lists[done]
+		} else {
+			l = &b.lists[toDo]
 		}
 
-		items := b.lists[focus].Items()
-		if index := getTaskIndex(items, msg.Task.Id); index != -1 {
-			//I HAVE TO DO THIS BULLSHIT BCS CHARM IS TAKING OVER A YEAR TO MERGE
-			//A PR THAT CHANGES 3 LINES FOR REMOVEITEM
-			return b, b.lists[focus].SetItems(slices.Delete(items, index, index+1))
-		}
-
-		return b, nil
+		return b, deleteSelectedItem(l)
 	}
 
 	var cmd tea.Cmd
@@ -156,6 +148,38 @@ func (b board) View() string {
 		lipgloss.JoinHorizontal(lipgloss.Left, views...),
 		b.helpView(),
 	)
+}
+
+// I have to do this bullshit because charm is taking over a year to merge
+// a pr that changes 3 lines for removeitem.
+func deleteSelectedItem(l *list.Model) tea.Cmd {
+	//Previous satate
+	pVisible := l.VisibleItems()
+	pFilter := l.FilterValue()
+	wasFiltered := l.IsFiltered()
+	i := l.Index()
+
+	//Set Items Globally
+	g := l.GlobalIndex()
+	cmd := l.SetItems(slices.Delete(l.Items(), g, g+1))
+
+	//Restore State
+	if wasFiltered {
+		l.SetFilterText(pFilter)
+	}
+	nLen := len(pVisible) - 1
+	if i >= nLen {
+		i = nLen - 1
+	}
+	if i < 0 {
+		i = 0
+		if wasFiltered {
+			l.ResetFilter()
+		}
+	}
+	l.Select(i)
+
+	return cmd
 }
 
 func (b board) helpView() string {
@@ -212,6 +236,9 @@ func (b *board) setSize(width, height int) {
 
 func (b *board) updateTasks(tasks models.Tasks) {
 	unfinished, finished := tasks.SplitByIsDone()
+
+	unfinished.SortByMostRecent()
+	finished.SortByMostRecent()
 
 	b.lists[toDo].SetItems(tasksToItems(unfinished))
 	b.lists[done].SetItems(tasksToItems(finished))

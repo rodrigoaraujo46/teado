@@ -1,4 +1,4 @@
-package teado
+package views
 
 import (
 	"teado/internal/messages"

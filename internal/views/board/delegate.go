@@ -169,7 +169,7 @@ func (d delegate) ShortHelp() []key.Binding {
 }
 
 func (d delegate) FullHelp() [][]key.Binding {
-	return [][]key.Binding{{d.keys.choose,d.keys.toggle, d.keys.remove}}
+	return [][]key.Binding{{d.keys.choose, d.keys.toggle, d.keys.remove}}
 }
 
 func (d delegate) updateTask(task models.Task) tea.Cmd {

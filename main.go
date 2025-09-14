@@ -2,10 +2,10 @@ package main
 
 import (
 	"os"
-	"teado/internal/board"
-	"teado/internal/form"
 	"teado/internal/store"
-	"teado/internal/teado"
+	"teado/internal/views"
+	"teado/internal/views/board"
+	"teado/internal/views/form"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -28,6 +28,6 @@ func main() {
 
 	form := form.New(store)
 
-	_, err = tea.NewProgram(teado.New(*board, *form), tea.WithAltScreen()).Run()
+	_, err = tea.NewProgram(views.New(*board, *form), tea.WithAltScreen()).Run()
 	assert.NoError(err, "Error running program")
 }
