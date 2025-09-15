@@ -28,21 +28,23 @@ func New(board tea.Model, form tea.Model) *root {
 }
 
 func (r root) Init() tea.Cmd {
-	return r.board.Init()
+	return tea.Batch(
+		tea.SetWindowTitle("teado"),
+		r.board.Init(),
+		r.form.Init(),
+	)
 }
 
 func (r *root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmds []tea.Cmd
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		r.board, cmd = r.board.Update(msg)
-		cmds = append(cmds, cmd)
-		r.form, cmd = r.form.Update(msg)
-		cmds = append(cmds, cmd)
+		var boardCmd, formCmd tea.Cmd
+		r.board, boardCmd = r.board.Update(msg)
+		r.form, formCmd = r.form.Update(msg)
 
-		return r, tea.Batch(cmds...)
+		return r, tea.Batch(boardCmd, formCmd)
 
 	case tea.KeyMsg:
 		switch msg.Type {

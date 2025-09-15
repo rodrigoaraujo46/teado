@@ -33,8 +33,10 @@ func (tasks Tasks) SplitByIsDone() (todo Tasks, done Tasks) {
 	return todo, done
 }
 
-func (tasks Tasks) SortByMostRecent() {
-	slices.SortFunc(tasks, func(a, b Task) int {
+func (tasks *Tasks) SortByMostRecent() *Tasks {
+	slices.SortFunc(*tasks, func(a, b Task) int {
 		return b.UpdatedAt.Compare(a.UpdatedAt)
 	})
+
+	return tasks
 }

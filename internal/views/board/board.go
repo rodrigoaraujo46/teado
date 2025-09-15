@@ -56,7 +56,7 @@ func (b board) Init() tea.Cmd {
 func (b board) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		b.setSize(msg.Width, msg.Height)
+		b.width, b.height = msg.Width, msg.Height
 		return b, nil
 
 	case tea.KeyMsg:
@@ -69,16 +69,10 @@ func (b board) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, b.keys.more):
 			b.fullHelp = !b.fullHelp
-			b.setSize(b.width, b.height)
 			return b, nil
 
 		case key.Matches(msg, b.keys.toggleList):
-			if b.current == done {
-				b.current = toDo
-			} else {
-				b.current = done
-			}
-
+			b.current = (b.current + 1) % 2
 			return b, nil
 		}
 
@@ -133,6 +127,7 @@ func (b board) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (b board) View() string {
 	views := make([]string, len(b.lists))
+	b.calculateSizes()
 	for i, l := range b.lists {
 		view := l.View()
 		if b.current == focus(i) {
@@ -218,8 +213,7 @@ func (b *board) ReadTasks() tea.Msg {
 	return messages.TasksRead{Tasks: tasks}
 }
 
-func (b *board) setSize(width, height int) {
-	b.width, b.height = width, height
+func (b *board) calculateSizes() {
 	helpHeight := b.helpLines()
 
 	b.styles.focused = b.styles.focused.
@@ -235,10 +229,7 @@ func (b *board) setSize(width, height int) {
 }
 
 func (b *board) updateTasks(tasks models.Tasks) {
-	unfinished, finished := tasks.SplitByIsDone()
-
-	unfinished.SortByMostRecent()
-	finished.SortByMostRecent()
+	unfinished, finished := tasks.SortByMostRecent().SplitByIsDone()
 
 	b.lists[toDo].SetItems(tasksToItems(unfinished))
 	b.lists[done].SetItems(tasksToItems(finished))

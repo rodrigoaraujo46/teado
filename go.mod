@@ -8,6 +8,7 @@ require (
 	github.com/charmbracelet/huh v0.7.0
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/x/ansi v0.9.3
+	github.com/davecgh/go-spew v1.1.1
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/rodrigoaraujo46/assert v0.1.0
 )
